@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tel-gift-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_CLIENT_ID=${NEXT_PUBLIC_CLIENT_ID}
+    depends_on:
+      - bot
+
+  bot:
+    build:
+      context: ./gift-card-bot
+      dockerfile: docker/Dockerfile
+    container_name: gift-card-bot
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - WEBAPP_URL=${WEBAPP_URL}
+      - HMAC_SECRET_KEY=${HMAC_SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - PROVIDER_TOKEN=${PROVIDER_TOKEN}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBHOOK_SECRET_TOKEN=${WEBHOOK_SECRET_TOKEN}
+      - WEBHOOK_PORT=${WEBHOOK_PORT}
+      - WEBHOOK_LISTEN=${WEBHOOK_LISTEN}
+      - LOG_LEVEL=${LOG_LEVEL}
+    volumes:
+      - ./gift-card-bot/data:/app/data
+      - ./gift-card-bot/webapp:/app/webapp
