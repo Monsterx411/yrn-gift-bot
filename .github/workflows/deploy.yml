@@ -34,4 +34,4 @@ jobs:
             echo "Error: THIRDWEB_API_KEY is not set in repository secrets";
             exit 1;
           fi
-          npx thirdweb@latest deploy --yes -k "$THIRDWEB_API_KEY"
+          npx thirdweb@latest deploy -k "$THIRDWEB_API_KEY"
