@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Gift Card Generator</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: var(--tg-theme-bg-color, #1a1a2e);
+            --text: var(--tg-theme-text-color, #e0e0e0);
+            --hint: var(--tg-theme-hint-color, #888);
+            --link: var(--tg-theme-link-color, #4fc3f7);
+            --button: var(--tg-theme-button-color, #4fc3f7);
+            --button-text: var(--tg-theme-button-text-color, #fff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #16213e);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            color: var(--hint);
+            font-size: 14px;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .card-template {
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-template:hover,
+        .card-template:active {
+            transform: translateY(-2px);
+        }
+
+        .card-template.selected {
+            border-color: var(--button);
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.3);
+        }
+
+        .card-template .card-color-bar {
+            height: 6px;
+            border-radius: 3px;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .card-template .card-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-template .card-amount {
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 8px;
+            color: var(--button);
+        }
+
+        .card-template .card-desc {
+            color: var(--hint);
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .card-template .select-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--hint);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .card-template.selected .select-indicator {
+            background: var(--button);
+            color: var(--button-text);
+            border-color: var(--button);
+        }
+
+        .generated-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 30px 24px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            display: none;
+        }
+
+        .generated-card.visible {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .generated-card .gift-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .generated-card .card-type-label {
+            font-size: 14px;
+            color: var(--hint);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .generated-card .card-code {
+            font-family: 'Courier New', monospace;
+            font-size: 22px;
+            letter-spacing: 4px;
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            user-select: all;
+            word-break: break-all;
+        }
+
+        .generated-card .card-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--button);
+        }
+
+        .generate-btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: var(--button);
+            color: var(--button-text);
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 12px;
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .generate-btn:active:not(:disabled) {
+            opacity: 0.8;
+        }
+
+        .copy-btn {
+            display: inline-block;
+            padding: 10px 24px;
+            background: rgba(79, 195, 247, 0.15);
+            color: var(--link);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:active {
+            background: rgba(79, 195, 247, 0.3);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 16px;
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            margin: 16px 0;
+        }
+
+        .stats-bar .stat-item {
+            text-align: center;
+        }
+
+        .stats-bar .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .stats-bar .stat-label {
+            font-size: 12px;
+            color: var(--hint);
+            margin-top: 2px;
+        }
+
+        .close-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            color: var(--button);
+            border: 1px solid var(--button);
+            border-radius: 14px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .hidden { display: none; }
+
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            color: var(--hint);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎁 Gift Card Generator</h1>
+        <p>Select a template and generate your card</p>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="genCount">0</div>
+            <div class="stat-label">Generated</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="totalValue">$0</div>
+            <div class="stat-label">Total Value</div>
+        </div>
+    </div>
+
+    <!-- Card Templates -->
+    <div class="cards-grid" id="cardsGrid">
+        <!-- Populated by JS -->
+    </div>
+
+    <!-- Generate Button -->
+    <button class="generate-btn" id="generateBtn" disabled>
+        ✨ Generate Gift Card
+    </button>
+
+    <!-- Generated Card Display -->
+    <div class="generated-card" id="generatedCard">
+        <div class="gift-icon">🎁</div>
+        <div class="card-type-label" id="genCardType">Premium</div>
+        <div class="card-code" id="genCardCode">XXXX-XXXX-XXXX-XXXX</div>
+        <div class="card-value" id="genCardValue">$50</div>
+        <button class="copy-btn" id="copyBtn">📋 Copy Code</button>
+        <button class="generate-btn" id="generateAnotherBtn" style="margin-top:16px;">
+            ✨ Generate Another
+        </button>
+        <button class="close-btn" id="closeBtn">Close</button>
+    </div>
+
+    <!-- Status Message -->
+    <div class="status-message" id="statusMessage"></div>
+
+    <script>
+        // --- Telegram WebApp Integration ---
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // --- Config ---
+        const TEMPLATES = {
+            basic: {
+                name: "Basic Gift Card",
+                amount: 10,
+                currency: "USD",
+                color: "#4CAF50",
+                description: "$10 Basic Gift Card"
+            },
+            premium: {
+                name: "Premium Gift Card",
+                amount: 50,
+                currency: "USD",
+                color: "#FFD700",
+                description: "$50 Premium Gift Card"
+            },
+            vip: {
+                name: "VIP Gift Card",
+                amount: 100,
+                currency: "USD",
+                color: "#9C27B0",
+                description: "$100 VIP Gift Card"
+            }
+        };
+
+        let selectedType = null;
+        let stats = { generated: 0, totalValue: 0 };
+
+        // If user data is available from Telegram
+        const initData = tg.initData || '';
+        const initDataUnsafe = tg.initDataUnsafe || {};
+        const userId = initDataUnsafe.user?.id || 'unknown';
+
+        // --- DOM Elements ---
+        const cardsGrid = document.getElementById('cardsGrid');
+        const generateBtn = document.getElementById('generateBtn');
+        const generatedCardDiv = document.getElementById('generatedCard');
+        const genCardType = document.getElementById('genCardType');
+        const genCardCode = document.getElementById('genCardCode');
+        const genCardValue = document.getElementById('genCardValue');
+        const copyBtn = document.getElementById('copyBtn');
+        const generateAnotherBtn = document.getElementById('generateAnotherBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const genCount = document.getElementById('genCount');
+        const totalValue = document.getElementById('totalValue');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // --- Render Templates ---
+        function renderTemplates() {
+            cardsGrid.innerHTML = '';
+            Object.entries(TEMPLATES).forEach(([key, template]) => {
+                const div = document.createElement('div');
+                div.className = 'card-template';
+                div.dataset.type = key;
+                div.innerHTML = `
+                    <div class="card-color-bar" style="background: ${template.color};"></div>
+                    <div class="card-name">${template.name}</div>
+                    <div class="card-amount">$${template.amount}</div>
+                    <div class="card-desc">${template.description}</div>
+                    <div class="select-indicator"></div>
+                `;
+                div.addEventListener('click', () => selectTemplate(key));
+                cardsGrid.appendChild(div);
+            });
+        }
+
+        function selectTemplate(key) {
+            selectedType = key;
+            document.querySelectorAll('.card-template').forEach(el => {
+                el.classList.toggle('selected', el.dataset.type === key);
+            });
+            generateBtn.disabled = false;
+            statusMessage.textContent = '';
+        }
+
+        // --- Generate Card ---
+        function generateGiftCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const groups = [];
+            for (let i = 0; i < 4; i++) {
+                let group = '';
+                for (let j = 0; j < 4; j++) {
+                    group += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                groups.push(group);
+            }
+            return groups.join('-');
+        }
+
+        async function generateCard(type) {
+            const template = TEMPLATES[type];
+            if (!template) return;
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+            statusMessage.textContent = '';
+
+            // Generate locally
+            const code = generateGiftCode();
+
+            // Update stats
+            stats.generated += 1;
+            stats.totalValue += template.amount;
+            updateStats();
+
+            // Show the generated card
+            genCardType.textContent = template.name;
+            genCardCode.textContent = code;
+            genCardValue.textContent = `$${template.amount}`;
+
+            // Update the card color
+            generatedCardDiv.style.display = 'block';
+            generatedCardDiv.classList.add('visible');
+            generatedCardDiv.style.borderColor = template.color;
+
+            // Hide the selection grid
+            cardsGrid.style.display = 'none';
+            generateBtn.style.display = 'none';
+
+            // Try to send data back to the bot (if opened from keyboard button)
+            // This works for the keyboard button flow
+            try {
+                tg.sendData(JSON.stringify({
+                    action: 'generate_card',
+                    card_type: type,
+                    code: code,
+                    amount: template.amount,
+                    currency: template.currency
+                }));
+            } catch (e) {
+                // sendData may not work in all launch modes
+                // The bot can still poll or receive via webhook
+                console.log('sendData not available, card generated client-side');
+            }
+
+            // Reset button
+            generateBtn.disabled = false;
+            generateBtn.textContent = '✨ Generate Gift Card';
+        }
+
+        function updateStats() {
+            genCount.textContent = stats.generated;
+            totalValue.textContent = `$${stats.totalValue}`;
+        }
+
+        function resetView() {
+            generatedCardDiv.classList.remove('visible');
+            generatedCardDiv.style.display = 'none';
+            cardsGrid.style.display = 'grid';
+            generateBtn.style.display = 'block';
+            statusMessage.textContent = '';
+        }
+
+        // --- Event Listeners ---
+        generateBtn.addEventListener('click', () => {
+            if (selectedType) generateCard(selectedType);
+        });
+
+        generateAnotherBtn.addEventListener('click', () => {
+            resetView();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            tg.close();
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const code = genCardCode.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy Code';
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy Code';
+                }, 2000);
+            });
+        });
+
+        // --- Main Button setup for WebApp ---
+        tg.MainButton.setText('Close Generator');
+        tg.MainButton.onClick(() => {
+            tg.close();
+        });
+
+        // --- Initialize ---
+        renderTemplates();
+        updateStats();
+
+        console.log('Gift Card Generator WebApp initialized for user:', userId);
+    </script>
+</body>
+</html>

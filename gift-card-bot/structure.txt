@@ -1,0 +1,75 @@
+gift-card-bot/
+├── .env                              # Env vars (tokens, secrets, admin IDs)
+├── .env.example                      # Template for .env
+├── .gitignore
+├── requirements.txt
+├── README.md
+├── Makefile                          # Dev convenience commands
+│
+├── bot/
+│   ├── __init__.py
+│   ├── main.py                       # Entry: polling mode (dev) or webhook mode
+│   ├── config.py                     # Loads .env
+│   │
+│   ├── handlers/
+│   │   ├── __init__.py
+│   │   ├── start.py                  # /start, /help
+│   │   ├── cards.py                  # /cards, inline generation flow
+│   │   ├── balance.py                # /balance, /history, /redeem
+│   │   ├── payments.py               # Stars payments (pre-checkout, successful)
+│   │   ├── webapp.py                 # web_app_data handler from Mini App
+│   │   └── admin.py                  # /admin panel (dashboard, templates, users)
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── card_generator.py         # Crypto-secure gift code generation
+│   │   ├── webapp_auth.py            # HMAC initData validation
+│   │   └── stats.py                  # Aggregation helpers
+│   │
+│   └── utils/
+│       ├── __init__.py
+│       ├── keyboards.py              # All keyboard builders
+│       └── formatters.py             # Display formatting
+│
+├── database/
+│   ├── __init__.py
+│   ├── engine.py                     # SQLAlchemy async engine + session factory
+│   ├── models.py                     # All ORM models (User, CardTemplate, GiftCard, Payment, AdminLog)
+│   └── repository.py                 # Full CRUD layer
+│
+├── webapp/                           # Telegram Mini App (frontend)
+│   ├── index.html                    # Main user-facing Mini App
+│   └── admin.html                    # Admin-facing Mini App (dashboard + template mgmt)
+│
+├── web/                              # FastAPI webhook server (production mode)
+│   ├── __init__.py
+│   ├── server.py                     # FastAPI app with lifespan, webhook endpoint
+│   ├── asgi.py                       # ASGI entry for uvicorn/gunicorn
+│   └── set_webhook.py                # One-time script to register webhook URL
+│
+├── data/                             # SQLite DB lives here (gitignored)
+│   └── .gitkeep
+│
+├── docker/
+│   ├── Dockerfile                    # Production image (poetry/uvicorn)
+│   ├── Dockerfile.dev                # Dev image with hot-reload
+│   ├── docker-compose.yml            # Bot + optional nginx/caddy
+│   └── nginx/
+│       └── default.conf              # Reverse proxy config for webhook
+│
+├── scripts/
+│   ├── seed_templates.py             # Re-seed default templates
+│   ├── set_webhook.py                # Register/refresh webhook URL
+│   ├── delete_webhook.py             # Remove webhook (revert to polling)
+│   └── backup_db.sh                  # Backup the SQLite database
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_card_generator.py
+│   ├── test_webapp_auth.py
+│   └── test_repository.py
+│
+└── docs/
+    ├── architecture.md               # Architecture overview
+    ├── api.md                        # Bot commands & callback reference
+    └── deployment.md                 # Deployment guide (VPS, Railway, Fly.io)
