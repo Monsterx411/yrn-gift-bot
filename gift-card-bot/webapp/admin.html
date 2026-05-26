@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Admin Panel</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: var(--tg-theme-bg-color, #0f0f1a);
+            --text: var(--tg-theme-text-color, #e0e0e0);
+            --hint: var(--tg-theme-hint-color, #888);
+            --button: var(--tg-theme-button-color, #4fc3f7);
+            --button-text: var(--tg-theme-button-text-color, #fff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #1a1a2e);
+            --danger: #ef5350;
+            --success: #66bb6a;
+            --warning: #ffa726;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 12px;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 16px;
+        }
+        .header h1 { font-size: 22px; }
+        .header .badge {
+            background: var(--danger); color: #fff;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px;
+        }
+
+        /* ── Dashboard Stats Grid ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-card .num {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--button);
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--hint);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Section Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: var(--secondary-bg);
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .tab.active {
+            border-color: var(--button);
+            background: rgba(79,195,247,0.1);
+            color: var(--button);
+        }
+
+        /* ── Template List ── */
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .template-item {
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            cursor: pointer;
+        }
+        .template-item .color-dot {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .template-item .info { flex: 1; }
+        .template-item .info .name { font-weight: 600; font-size: 15px; }
+        .template-item .info .meta { font-size: 12px; color: var(--hint); margin-top: 2px; }
+        .template-item .status-badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .status-badge.active { background: rgba(102,187,106,0.2); color: var(--success); }
+        .status-badge.inactive { background: rgba(239,83,80,0.2); color: var(--danger); }
+
+        /* ── User List ── */
+        .user-item {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-item .uid { font-family: monospace; font-size: 13px; }
+        .user-item .uname { font-size: 13px; color: var(--hint); }
+        .user-item .crown { color: var(--warning); }
+
+        /* ── Actions ── */
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary { background: var(--button); color: var(--button-text); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+        .action-bar {
+            display: flex; gap: 8px;
+            margin-top: 16px;
+        }
+        .action-bar .btn { flex: 1; text-align: center; }
+
+        .inline-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .backdrop {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .backdrop.visible { display: flex; }
+
+        .modal {
+            background: var(--bg);
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 380px;
+        }
+        .modal h2 { margin-bottom: 16px; font-size: 18px; }
+        .modal .field {
+            margin-bottom: 12px;
+        }
+        .modal .field label {
+            display: block;
+            font-size: 12px;
+            color: var(--hint);
+            margin-bottom: 4px;
+        }
+        .modal .field input, .modal .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--secondary-bg);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+        }
+        .modal .field textarea { resize: vertical; min-height: 60px; }
+        .modal .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .modal .btn-row .btn { flex: 1; }
+
+        .close-app {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            color: var(--hint);
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🛠️ Admin</h1>
+        <span class="badge">ADMIN</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="num" id="statUsers">-</div><div class="label">Users</div></div>
+        <div class="stat-card"><div class="num" id="statCards">-</div><div class="label">Total Cards</div></div>
+        <div class="stat-card"><div class="num" id="statActive">-</div><div class="label">Active</div></div>
+        <div class="stat-card"><div class="num" id="statStars">-</div><div class="label">Stars Earned</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" data-tab="templates">📝 Templates</div>
+        <div class="tab" data-tab="users">👥 Users</div>
+        <div class="tab" data-tab="actions">⚡ Actions</div>
+    </div>
+
+    <!-- Section: Templates -->
+    <div class="section active" id="section-templates">
+        <div id="templateList"></div>
+        <div class="action-bar">
+            <button class="btn btn-primary" id="addTemplateBtn">➕ New Template</button>
+            <button class="btn" id="refreshTemplatesBtn" style="background:var(--secondary-bg);">🔄</button>
+        </div>
+    </div>
+
+    <!-- Section: Users -->
+    <div class="section" id="section-users">
+        <div id="userList">
+            <p style="color:var(--hint);text-align:center;padding:30px 0;">
+                Load users from the bot's /admin panel
+            </p>
+        </div>
+    </div>
+
+    <!-- Section: Actions -->
+    <div class="section" id="section-actions">
+        <div class="template-item" style="cursor:default;">
+            <div class="info">
+                <div class="name">🗄️ Export Database</div>
+                <div class="meta">Download a backup of all data</div>
+            </div>
+        </div>
+        <div class="template-item" style="cursor:default;">
+            <div class="info">
+                <div class="name">🧹 Purge Expired Cards</div>
+                <div class="meta">Remove cards older than 90 days</div>
+            </div>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-danger" id="emergencyStopBtn" style="flex:2;">🛑 Emergency Stop</button>
+            <button class="btn" id="closeAppBtn" style="flex:1;background:var(--secondary-bg);">✕ Close</button>
+        </div>
+    </div>
+
+    <!-- Modal: New/Edit Template -->
+    <div class="backdrop" id="templateModal">
+        <div class="modal">
+            <h2 id="modalTitle">New Template</h2>
+
+            <div class="field">
+                <label>Key (e.g. "gold")</label>
+                <input type="text" id="tmplKey" placeholder="gold" />
+            </div>
+            <div class="field">
+                <label>Name</label>
+                <input type="text" id="tmplName" placeholder="Gold Gift Card" />
+            </div>
+            <div class="field">
+                <label>Description</label>
+                <textarea id="tmplDesc" placeholder="$200 Gold Gift Card"></textarea>
+            </div>
+            <div class="field">
+                <label>Amount (cents, e.g. 20000 = $200.00)</label>
+                <input type="number" id="tmplAmount" placeholder="20000" />
+            </div>
+            <div class="field">
+                <label>Currency</label>
+                <input type="text" id="tmplCurrency" value="USD" />
+            </div>
+            <div class="field">
+                <label>Color (hex)</label>
+                <input type="text" id="tmplColor" value="#FFA500" />
+            </div>
+            <div class="field">
+                <label>Stars Cost</label>
+                <input type="number" id="tmplStars" placeholder="180" />
+            </div>
+
+            <div class="btn-row">
+                <button class="btn" id="modalCancelBtn" style="background:var(--secondary-bg);">Cancel</button>
+                <button class="btn btn-primary" id="modalSaveBtn">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // ── Mock data (in production, fetch from bot API) ──
+        let templates = [
+            { key:'basic', name:'Basic Gift Card', desc:'$10 Basic Gift Card', amount:1000, currency:'USD', color:'#4CAF50', stars:10, active:true },
+            { key:'premium', name:'Premium Gift Card', desc:'$50 Premium Gift Card', amount:5000, currency:'USD', color:'#FFD700', stars:45, active:true },
+            { key:'vip', name:'VIP Gift Card', desc:'$100 VIP Gift Card', amount:10000, currency:'USD', color:'#9C27B0', stars:85, active:true },
+        ];
+        let stats = { users: 42, cards: 156, active: 89, stars: 3240 };
+        let editingKey = null;
+
+        // ── Render ──
+        function renderStats() {
+            document.getElementById('statUsers').textContent = stats.users;
+            document.getElementById('statCards').textContent = stats.cards;
+            document.getElementById('statActive').textContent = stats.active;
+            document.getElementById('statStars').textContent = stats.stars;
+        }
+
+        function renderTemplates() {
+            const container = document.getElementById('templateList');
+            container.innerHTML = '';
+            templates.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'template-item';
+                div.innerHTML = `
+                    <div class="color-dot" style="background:${t.color};"></div>
+                    <div class="info">
+                        <div class="name">${t.name}</div>
+                        <div class="meta">\$${(t.amount/100).toFixed(2)} · ${t.stars}⭐ · ${t.key}</div>
+                    </div>
+                    <span class="status-badge ${t.active ? 'active' : 'inactive'}">
+                        ${t.active ? 'Active' : 'Off'}
+                    </span>
+                `;
+                div.addEventListener('click', () => openEditModal(t));
+                container.appendChild(div);
+            });
+        }
+
+        function openEditModal(t) {
+            editingKey = t.key;
+            document.getElementById('modalTitle').textContent = '✏️ Edit Template';
+            document.getElementById('tmplKey').value = t.key;
+            document.getElementById('tmplKey').disabled = true;
+            document.getElementById('tmplName').value = t.name;
+            document.getElementById('tmplDesc').value = t.desc;
+            document.getElementById('tmplAmount').value = t.amount;
+            document.getElementById('tmplCurrency').value = t.currency;
+            document.getElementById('tmplColor').value = t.color;
+            document.getElementById('tmplStars').value = t.stars;
+            document.getElementById('templateModal').classList.add('visible');
+        }
+
+        function openNewModal() {
+            editingKey = null;
+            document.getElementById('modalTitle').textContent = '➕ New Template';
+            ['tmplKey','tmplName','tmplDesc','tmplAmount','tmplCurrency','tmplColor','tmplStars'].forEach(id => {
+                const el = document.getElementById(id);
+                el.value = '';
+                el.disabled = false;
+            });
+            document.getElementById('tmplCurrency').value = 'USD';
+            document.getElementById('tmplColor').value = '#4CAF50';
+            document.getElementById('templateModal').classList.add('visible');
+        }
+
+        function saveTemplate() {
+            const data = {
+                key: document.getElementById('tmplKey').value.trim(),
+                name: document.getElementById('tmplName').value.trim(),
+                desc: document.getElementById('tmplDesc').value.trim(),
+                amount: parseInt(document.getElementById('tmplAmount').value) || 0,
+                currency: document.getElementById('tmplCurrency').value.trim().toUpperCase(),
+                color: document.getElementById('tmplColor').value.trim(),
+                stars: parseInt(document.getElementById('tmplStars').value) || 0,
+                active: true,
+            };
+
+            if (!data.key || !data.name || data.amount <= 0) {
+                tg.showAlert('Key, Name, and Amount are required.');
+                return;
+            }
+
+            if (editingKey) {
+                const idx = templates.findIndex(t => t.key === editingKey);
+                if (idx !== -1) templates[idx] = { ...templates[idx], ...data, key: editingKey };
+            } else {
+                if (templates.some(t => t.key === data.key)) {
+                    tg.showAlert(`Template "${data.key}" already exists.`);
+                    return;
+                }
+                templates.push(data);
+            }
+
+            // In production, send to bot: tg.sendData(JSON.stringify({action:'save_template', ...}))
+            document.getElementById('templateModal').classList.remove('visible');
+            renderTemplates();
+            tg.showAlert(editingKey ? '✅ Template updated!' : '✅ Template created!');
+        }
+
+        // ── Tab Switching ──
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`section-${tab.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        // ── Event Listeners ──
+        document.getElementById('addTemplateBtn').addEventListener('click', openNewModal);
+        document.getElementById('refreshTemplatesBtn').addEventListener('click', () => {
+            tg.showAlert('🔄 Refreshing... (In production, fetches from bot API)');
+            renderTemplates();
+        });
+        document.getElementById('modalCancelBtn').addEventListener('click', () => {
+            document.getElementById('templateModal').classList.remove('visible');
+        });
+        document.getElementById('modalSaveBtn').addEventListener('click', saveTemplate);
+        document.getElementById('closeAppBtn').addEventListener('click', () => tg.close());
+
+        document.getElementById('emergencyStopBtn').addEventListener('click', () => {
+            if (confirm('Emergency stop: deactivate all card generation?')) {
+                tg.sendData(JSON.stringify({ action: 'emergency_stop' }));
+                tg.showAlert('🛑 Emergency stop signal sent to bot.');
+            }
+        });
+
+        // ── Init ──
+        renderStats();
+        renderTemplates();
+
+        // MainButton
+        tg.MainButton.setText('Close Admin');
+        tg.MainButton.onClick(() => tg.close());
+    </script>
+</body>
+</html>

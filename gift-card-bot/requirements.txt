@@ -1,0 +1,21 @@
+# Core
+python-telegram-bot>=22.7
+
+# Database
+sqlalchemy>=2.0
+aiosqlite>=0.20
+
+# Web server (webhook mode)
+fastapi>=0.115
+uvicorn[standard]>=0.32
+
+# Config
+python-dotenv>=1.0
+
+# Testing (optional)
+pytest>=8.0
+pytest-asyncio>=0.24
+httpx>=0.28
+
+# Linting (optional)
+ruff>=0.7
