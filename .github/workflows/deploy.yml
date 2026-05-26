@@ -1,0 +1,37 @@
+name: Deploy to thirdweb
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_CLIENT_ID }}
+      THIRDWEB_API_KEY: ${{ secrets.THIRDWEB_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Deploy to thirdweb
+        run: |
+          if [ -z "$THIRDWEB_API_KEY" ]; then
+            echo "Error: THIRDWEB_API_KEY is not set in repository secrets";
+            exit 1;
+          fi
+          npx thirdweb@latest deploy -k "$THIRDWEB_API_KEY"
